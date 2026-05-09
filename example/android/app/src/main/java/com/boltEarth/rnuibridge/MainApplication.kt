@@ -1,6 +1,7 @@
 package com.boltearth.rnuibridge
 
 import android.app.Application
+import com.boltearth.reactnativesdk.BoltEarthUiSdkPackage
 import com.facebook.react.PackageList
 import com.facebook.react.ReactApplication
 import com.facebook.react.ReactHost

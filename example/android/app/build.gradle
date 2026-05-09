@@ -101,9 +101,8 @@ kapt {
 
 dependencies {
     implementation("com.facebook.react:react-android")
-    implementation(project(":boltearth-rnsdk"))
 
-    // Needed for compile-only Hilt *LazyMapKey shims (bolt-earth-ui-sdk AAR omits them; see Hilt ASM on :boltearth-rnsdk).
+    // Needed for compile-only Hilt *LazyMapKey shims (bolt-earth-ui-sdk AAR omits them; see Hilt ASM on the library module).
     implementation("io.github.boltearth:bolt-earth-ui-sdk:1.0.0") {
         exclude group: "com.github.theGlenn.flipper-android-no-op", module: "soloadernoop"
     }

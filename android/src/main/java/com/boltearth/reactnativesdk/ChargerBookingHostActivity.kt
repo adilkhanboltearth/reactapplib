@@ -1,8 +1,7 @@
-package com.boltearth.rnuibridge
+package com.boltearth.reactnativesdk
 
 import android.content.Context
 import android.os.Bundle
-import androidx.appcompat.app.AppCompatActivity
 import com.boltearthsdk.BoltEarthHostActivity
 import com.boltearthsdk.BoltEarthUiSdk
 import dagger.hilt.android.AndroidEntryPoint

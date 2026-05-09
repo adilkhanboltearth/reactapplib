@@ -1,34 +1,59 @@
-buildscript {
-    ext {
-        buildToolsVersion = "36.0.0"
-        minSdkVersion = 24
-        compileSdkVersion = 36
-        targetSdkVersion = 35
-        ndkVersion = "27.1.12297006"
-        kotlinVersion = "2.1.20"
+plugins {
+    id("com.android.library")
+    id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.kapt")
+    id("com.google.dagger.hilt.android")
+}
+
+def safeExt(String name, def fallback) {
+    return rootProject.ext.has(name) ? rootProject.ext.get(name) : fallback
+}
+
+android {
+    compileSdk safeExt("compileSdkVersion", 36)
+    namespace "com.boltearth.reactnativesdk"
+
+    defaultConfig {
+        minSdkVersion safeExt("minSdkVersion", 24)
+        targetSdkVersion safeExt("targetSdkVersion", 36)
+        vectorDrawables.useSupportLibrary = true
     }
-    repositories {
-        google()
-        mavenCentral()
+
+    buildFeatures {
+        dataBinding true
+        buildConfig true
+        viewBinding true
     }
-    dependencies {
-        classpath("com.android.tools.build:gradle")
-        classpath("com.facebook.react:react-native-gradle-plugin")
-        // Pin Kotlin: an unversioned classpath may resolve to 2.2+ and emit metadata 2.2.0,
-        // which older Hilt/Dagger cannot read during Java compile.
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
-        classpath("com.google.dagger:hilt-android-gradle-plugin:2.54")
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
     }
 }
 
-apply plugin: "com.facebook.react.rootproject"
+kapt {
+    correctErrorTypes true
+}
 
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
-        maven { url "https://jitpack.io" }
-        maven { url "https://maven.juspay.in/jp-build-packages/hyper-sdk/" }
-        maven { url "https://adilkhanboltearth.github.io/boltearthuisdk/releases" }
+dependencies {
+    compileOnly("com.facebook.react:react-android")
+
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+
+    implementation("androidx.appcompat:appcompat:1.7.0")
+    implementation("com.google.android.material:material:1.13.0")
+    implementation("androidx.constraintlayout:constraintlayout:2.2.0")
+    implementation("androidx.navigation:navigation-fragment-ktx:2.8.4")
+    implementation("androidx.navigation:navigation-ui-ktx:2.8.4")
+
+    implementation("com.google.dagger:hilt-android:2.54")
+    kapt("com.google.dagger:hilt-android-compiler:2.54")
+
+    implementation("io.github.boltearth:bolt-earth-ui-sdk:1.0.0") {
+        exclude group: "com.github.theGlenn.flipper-android-no-op", module: "soloadernoop"
     }
 }

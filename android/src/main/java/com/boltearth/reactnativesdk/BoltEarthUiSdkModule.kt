@@ -1,4 +1,4 @@
-package com.boltearth.rnuibridge
+package com.boltearth.reactnativesdk
 
 import android.content.Context
 import android.content.ContextWrapper
@@ -177,7 +177,6 @@ class BoltEarthUiSdkModule(private val reactContext: ReactApplicationContext) :
   @ReactMethod
   fun openUsersBookingsList(promise: Promise) {
     try {
-      // SDK starts an Activity from this Context; ApplicationContext requires FLAG_ACTIVITY_NEW_TASK.
       val launchContext =
         reactApplicationContext.currentActivity
           ?: newTaskApplicationContext(reactApplicationContext)
@@ -205,10 +204,6 @@ class BoltEarthUiSdkModule(private val reactContext: ReactApplicationContext) :
     }
   }
 
-  /**
-   * [BoltEarthUiSdk.openUsersBookingsList] calls [Context.startActivity]. From RN that is often an
-   * application [Context], which must use [Intent.FLAG_ACTIVITY_NEW_TASK].
-   */
   private fun newTaskApplicationContext(appContext: Context): Context {
     return object : ContextWrapper(appContext) {
       override fun startActivity(intent: Intent) {

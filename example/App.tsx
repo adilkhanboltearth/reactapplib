@@ -30,7 +30,7 @@ import {
   openChargerBookingFlow,
   openUsersBookingsList,
   wrapContextWithTheme,
-} from './src/boltEarthUiSdk';
+} from '@boltearth/react-native-sdk';
 
 function App() {
   const isDarkMode = useColorScheme() === 'dark';

@@ -1,4 +1,4 @@
-package com.boltearth.rnuibridge
+package com.boltearth.reactnativesdk
 
 import com.facebook.react.ReactPackage
 import com.facebook.react.bridge.NativeModule

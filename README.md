@@ -1,8 +1,32 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# Bolt Earth React Native SDK (`@boltearth/react-native-sdk`)
+
+This repo is a **library** plus an **`example/`** app.
+
+| Path | Purpose |
+|------|---------|
+| `android/`, `ios/`, `src/` | Published npm package (native module + TS). |
+| `example/` | Host React Native app (Hilt, data binding, LazyMapKey shims, dev client). |
+
+Consumer apps add `"@boltearth/react-native-sdk"` to `package.json` and follow Android/iOS host setup (Gradle repos, Hilt, `dataBinding`, `BoltEarthUiSdkCore` pod, etc.).
+
+### Develop locally
+
+**Android:** symlinked `file:..` fails resource merging on some AGP versions. The example depends on a **packed tarball** at repo root:
+
+```sh
+npm pack   # writes `boltearth-react-native-sdk-1.0.0.tgz`
+cd example && npm install && npm run android
+```
+
+Metro is configured so **JavaScript** loads from the repo root (`extraNodeModules`); change **Kotlin/Swift** → run `npm pack` again and `npm install` inside `example/`.
+
+---
+
+This is a new [**React Native**](https://reactnative.dev) **example** project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
 
 # Getting Started
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+> **Note**: Run all **example** commands from the `example/` directory after `npm install`.
 
 ## Step 1: Start Metro
 

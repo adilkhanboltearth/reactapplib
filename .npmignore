@@ -1,0 +1,8 @@
+android/build/
+android/.gradle/
+android/.idea/
+example/
+node_modules/
+.git/
+*.tgz
+**/*.iml
