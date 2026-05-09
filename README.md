@@ -1,29 +1,93 @@
-# Bolt Earth React Native SDK (`@boltearth/react-native-sdk`)
+# Bolt Earth React Native SDK — Short integration reference
 
-Android-only React Native library: TypeScript API in `src/` plus the native module in `android/`. There is no iOS implementation in this package.
+**Package:** `@boltearth/react-native-sdk` (Android-only; [source](https://github.com/adilkhanboltearth/reactapplib))
 
-## Consuming the library
+---
 
-Add the dependency (from npm, a private registry, or a packed tarball), then wire the Android Gradle module and host app requirements (Hilt, data binding, Bolt Earth UI SDK Maven coordinates, etc.) per your integration guide.
+## Install (npm)
 
-```json
-{
-  "dependencies": {
-    "@boltearth/react-native-sdk": "^1.0.0"
-  }
+
+From **GitHub**:
+
+```bash
+npm install github:adilkhanboltearth/reactapplib#main
+```
+
+From **tarball** (per upstream): clone repo → `npm install` → `npm pack` → install the generated `.tgz` in your app.
+
+---
+
+## Gradle: what you must add
+
+### 1. Hilt (required — Bolt UI activities are Hilt-based)
+
+| Where | What |
+|--------|------|
+| **`android/settings.gradle`** | Inside `pluginManagement { plugins { … } }`: `id("com.google.dagger.hilt.android") version "2.54"` (+ keep RN `includeBuild` for the gradle plugin). |
+| **`android/build.gradle`** `buildscript.dependencies` | `classpath("com.google.dagger:hilt-android-gradle-plugin:2.54")` and pin Kotlin: `classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")`. |
+| **`android/app/build.gradle`** | Plugins: `com.google.dagger.hilt.android`, `org.jetbrains.kotlin.kapt`. |
+| **`android/app/build.gradle`** `dependencies` | `implementation("com.google.dagger:hilt-android:2.54")`, `kapt("com.google.dagger:hilt-android-compiler:2.54")`. |
+| **`MainApplication`** | `@HiltAndroidApp` on your `Application` class (manifest `android:name` must point to it). |
+
+### 2. Host app module (`:app`)
+
+- **`buildFeatures { dataBinding true }`**  
+- **Java / Kotlin 17** (`compileOptions` + `kotlinOptions`)  
+- **`kapt { correctErrorTypes true }`**
+
+### 3. Maven repositories (`android/build.gradle`, `allprojects { repositories { … } }`)
+
+Bolt’s UI SDK **must not** resolve via JitPack under `io.github.boltearth` (you can get **401** or wrong resolution). Add:
+
+```gradle
+google()
+mavenCentral()
+
+maven { url "https://adilkhanboltearth.github.io/boltearthuisdk/releases" }
+
+maven { url "https://maven.juspay.in/jp-build-packages/hyper-sdk/" }
+
+maven {
+    url "https://www.jitpack.io"
+    content { excludeGroup "io.github.boltearth" }
 }
 ```
 
-The published npm artifact includes `src/`, `android/build.gradle`, and `android/src/` (see `package.json` → `files`).
+**Juspay** — Maven URL above; required for transitive deps of the Bolt UI stack.  
+**Hilt** — see table in §1.
 
-## Local development (`example/`)
+### 4. Bolt Earth UI SDK on `:app` (explicit, matches upstream example)
 
-The `example/` app is an Android-only host for manual testing. Symlinking the parent folder as a dependency can break resource merging on some AGP versions, so the example depends on a tarball produced at the repo root:
-
-```sh
-npm install          # root: TypeScript only
-npm pack             # creates boltearth-react-native-sdk-1.0.0.tgz at repo root
-cd example && npm install && npm run android
+```gradle
+implementation("io.github.boltearth:bolt-earth-ui-sdk:1.0.0") {
+    exclude group: "com.github.theGlenn.flipper-android-no-op", module: "soloadernoop"
+}
 ```
 
-Metro resolves JavaScript from the repo root (`extraNodeModules`); after native Kotlin changes, run `npm pack` again and reinstall in `example/`.
+**Version** (`1.0.0` here) — confirm with Bolt Earth for production; bump when they release.
+
+---
+
+## npm / Node vs Gradle (when New Architecture codegen runs)
+
+Gradle may run **`node`** for library codegen. If Android Studio builds fail with **“Cannot run program 'node'”**, set **one** of:
+
+- `nodejs.executable=/absolute/path/to/node` in **`android/local.properties`**, or  
+- **`NODE_BINARY`** env to that path, or  
+- In **`android/app/build.gradle`** → `react { nodeExecutableAndArgs.set([absolutePathToNode]) }`
+
+---
+
+## JavaScript (minimal)
+
+```ts
+import {
+  initialize,
+  openChargerBookingFlow,
+  isBoltEarthUiSdkAvailable,
+} from '@boltearth/react-native-sdk';
+
+// Android only
+initialize({ userId, sdkToken, sdkPackage, primaryColor, localeLanguageTag });
+await openChargerBookingFlow();
+```
