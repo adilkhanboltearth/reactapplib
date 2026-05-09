@@ -1,7 +1,7 @@
 {
   "name": "@boltearth/react-native-sdk",
   "version": "1.0.0",
-  "description": "Bolt Earth React Native SDK — Android (bolt-earth-ui-sdk) + iOS (BoltEarthUiSdkCore)",
+  "description": "Bolt Earth React Native SDK — Android native bridge for bolt-earth-ui-sdk",
   "main": "src/index.ts",
   "types": "src/index.ts",
   "react-native": "src/index.ts",
@@ -11,14 +11,7 @@
     "type": "git",
     "url": "https://github.com/adilkhanboltearth/reactapplib.git"
   },
-  "files": [
-    "src",
-    "android/build.gradle",
-    "android/src",
-    "ios",
-    "BoltEarthReactNativeSdk.podspec",
-    "README.md"
-  ],
+  "files": ["src", "android/build.gradle", "android/src", "README.md"],
   "peerDependencies": {
     "react": ">=18.0.0",
     "react-native": ">=0.71.0"

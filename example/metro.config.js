@@ -6,7 +6,7 @@ const monorepoRoot = path.resolve(projectRoot, '..');
 
 /**
  * JS resolves `@boltearth/react-native-sdk` from the repo root for fast refresh while developing.
- * Native Android/iOS still come from the unpacked tarball under `node_modules` (run `npm pack` in ../).
+ * Native Android still comes from the unpacked tarball under `node_modules` (run `npm pack` in `..` first).
  */
 module.exports = mergeConfig(getDefaultConfig(projectRoot), {
   watchFolders: [monorepoRoot],

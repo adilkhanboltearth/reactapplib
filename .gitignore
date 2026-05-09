@@ -35,6 +35,9 @@ local.properties
 !debug.keystore
 .kotlin/
 
+# Pack tarball for local example (see README); do not commit
+boltearth-react-native-sdk-*.tgz
+
 # node.js
 #
 node_modules/
