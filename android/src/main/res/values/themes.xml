@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <!-- Parent lives in bolt-earth-ui-sdk (Theme.BoltApp). Same pattern as BoltEarthRnApp. -->
-    <style name="Theme.BoltEarthRnBridgeBooking" parent="Theme.BoltApp" />
-</resources>

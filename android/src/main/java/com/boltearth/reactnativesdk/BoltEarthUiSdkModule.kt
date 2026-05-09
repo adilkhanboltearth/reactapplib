@@ -190,14 +190,10 @@ class BoltEarthUiSdkModule(private val reactContext: ReactApplicationContext) :
   @ReactMethod
   fun openChargerBookingFlow(promise: Promise) {
     try {
-      val intent = Intent(reactApplicationContext, ChargerBookingHostActivity::class.java)
-      val activity = reactApplicationContext.currentActivity
-      if (activity != null) {
-        activity.startActivity(intent)
-      } else {
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        reactApplicationContext.startActivity(intent)
-      }
+      val launchContext =
+        reactApplicationContext.currentActivity
+          ?: newTaskApplicationContext(reactApplicationContext)
+      BoltEarthUiSdk.openChargerBookingFlow(launchContext)
       promise.resolve(null)
     } catch (e: Exception) {
       promise.reject("E_OPEN_CHARGER_BOOKING", e.message, e)
