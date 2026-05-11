@@ -63,14 +63,20 @@ Gradle may run **`node`** for library codegen. If Android Studio builds fail wit
 
 ## JavaScript (minimal)
 
+The JS bridge mirrors the native **`BoltEarthUiSdk`** surface: **`initialize`**, **`logout`**, **`openChargerBookingFlow`**, **`openUsersBookingsList`**, plus **`isBoltEarthUiSdkAvailable`**.
+
 ```ts
 import {
   initialize,
+  logout,
   openChargerBookingFlow,
+  openUsersBookingsList,
   isBoltEarthUiSdkAvailable,
 } from '@boltearth/react-native-sdk';
 
 // Android only
-initialize({ userId, sdkToken, sdkPackage, primaryColor, localeLanguageTag });
+initialize({ userId, sdkToken, sdkPackage, primaryColor, localeLanguageTag, fontOverrides });
 await openChargerBookingFlow();
+await openUsersBookingsList();
+await logout();
 ```

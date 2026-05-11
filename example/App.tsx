@@ -23,13 +23,11 @@ import {
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 import {
-  ensureLoggedIn,
-  hasValidSession,
   initialize,
   isBoltEarthUiSdkAvailable,
+  logout,
   openChargerBookingFlow,
   openUsersBookingsList,
-  wrapContextWithTheme,
 } from '@boltearth/react-native-sdk';
 
 function App() {
@@ -45,32 +43,17 @@ function App() {
 
 function AppContent() {
   const safeAreaInsets = useSafeAreaInsets();
-  const isDark = useColorScheme() === 'dark';
 
   const [userId, setUserId] = useState('');
   const [sdkToken, setSdkToken] = useState('');
   const [sdkPackage, setSdkPackage] = useState('');
   const [primaryColor, setPrimaryColor] = useState('');
   const [initialized, setInitialized] = useState(false);
-  const [sessionValid, setSessionValid] = useState<boolean | null>(null);
-  const [busy, setBusy] = useState<'init' | 'login' | 'list' | 'charger' | null>(
-    null,
-  );
+  const [busy, setBusy] = useState<
+    'init' | 'logout' | 'list' | 'charger' | null
+  >(null);
 
-  const refreshSession = useCallback(async () => {
-    if (!isBoltEarthUiSdkAvailable || !initialized) {
-      setSessionValid(null);
-      return;
-    }
-    try {
-      const ok = await hasValidSession();
-      setSessionValid(ok);
-    } catch {
-      setSessionValid(null);
-    }
-  }, [initialized]);
-
-  const onInitialize = async () => {
+  const onInitialize = useCallback(async () => {
     if (!isBoltEarthUiSdkAvailable) {
       return;
     }
@@ -88,44 +71,37 @@ function AppContent() {
         ...(sdkPackage.trim() ? { sdkPackage: sdkPackage.trim() } : {}),
         ...(primaryColor.trim() ? { primaryColor: primaryColor.trim() } : {}),
       });
-      await wrapContextWithTheme();
       setInitialized(true);
-      await refreshSession();
-      Alert.alert('SDK ready', 'Initialized and theme applied.');
+      Alert.alert('SDK ready', 'Initialized.');
     } catch (e) {
       Alert.alert('Initialize failed', String(e));
       setInitialized(false);
     } finally {
       setBusy(null);
     }
-  };
+  }, [userId, sdkToken, sdkPackage, primaryColor]);
 
-  const onBookingLoginFlow = async () => {
-    if (!isBoltEarthUiSdkAvailable) {
+  const onLogout = useCallback(async () => {
+    if (!isBoltEarthUiSdkAvailable || !initialized) {
       return;
     }
-    if (!initialized) {
-      Alert.alert('Not initialized', 'Tap “Initialize SDK” first.');
-      return;
-    }
-    setBusy('login');
+    setBusy('logout');
     try {
-      const result = await ensureLoggedIn();
-      await refreshSession();
+      const result = await logout();
       if (result.type === 'success') {
-        Alert.alert('Login / session', 'Success (ensureLoggedIn).');
+        Alert.alert('Logout', 'Session cleared.');
       } else {
         Alert.alert(
-          'Login / session',
+          'Logout',
           result.errorMessage ?? result.type ?? 'Unknown result',
         );
       }
     } catch (e) {
-      Alert.alert('ensureLoggedIn failed', String(e));
+      Alert.alert('logout failed', String(e));
     } finally {
       setBusy(null);
     }
-  };
+  }, [initialized]);
 
   const onOpenBookingsList = async () => {
     if (!isBoltEarthUiSdkAvailable) {
@@ -198,8 +174,8 @@ function AppContent() {
         Bolt Earth UI SDK
       </Text>
       <Text style={[styles.hint, { color: palette.muted }]}>
-        Initialize with your backend user id and token, then open the booking
-        login or listings screens.
+        Initialize with your backend user id and token, then open booking
+        screens. Login gates run inside the native SDK when needed.
       </Text>
 
       {!isBoltEarthUiSdkAvailable ? (
@@ -255,27 +231,6 @@ function AppContent() {
         style={[styles.input, { color: palette.text, borderColor: palette.border }]}
       />
 
-      <View style={styles.row}>
-        <Text style={[styles.session, { color: palette.muted }]}>
-          Session valid:{' '}
-          <Text style={{ color: palette.text }}>
-            {sessionValid == null ? '—' : sessionValid ? 'yes' : 'no'}
-          </Text>
-        </Text>
-        <Pressable
-          onPress={refreshSession}
-          disabled={disabled || !initialized}
-          style={({ pressed }) => [
-            styles.smallBtn,
-            {
-              borderColor: palette.border,
-              opacity: pressed ? 0.7 : disabled || !initialized ? 0.4 : 1,
-            },
-          ]}>
-          <Text style={{ color: palette.accent, fontWeight: '600' }}>Refresh</Text>
-        </Pressable>
-      </View>
-
       <PrimaryButton
         label={busy === 'init' ? 'Initializing…' : 'Initialize SDK'}
         onPress={onInitialize}
@@ -286,20 +241,20 @@ function AppContent() {
         <ActivityIndicator color={palette.accent} style={styles.spinner} />
       ) : null}
 
-      <Text style={[styles.section, { color: palette.text }]}>Booking flows</Text>
+      <Text style={[styles.section, { color: palette.text }]}>Session</Text>
 
       <PrimaryButton
-        label={
-          busy === 'login' ? 'Opening login / session…' : 'Booking login / session'
-        }
-        subtitle="Maps to ensureLoggedIn()"
-        onPress={onBookingLoginFlow}
-        disabled={disabled}
+        label={busy === 'logout' ? 'Logging out…' : 'Logout (native)'}
+        subtitle="Clears tokens and SDK caches on device"
+        onPress={onLogout}
+        disabled={disabled || !initialized}
         palette={palette}
       />
-      {busy === 'login' ? (
+      {busy === 'logout' ? (
         <ActivityIndicator color={palette.accent} style={styles.spinner} />
       ) : null}
+
+      <Text style={[styles.section, { color: palette.text }]}>Booking flows</Text>
 
       <PrimaryButton
         label={busy === 'list' ? 'Opening list…' : 'My bookings (listing)'}
@@ -314,7 +269,7 @@ function AppContent() {
 
       <PrimaryButton
         label={busy === 'charger' ? 'Opening charger booking…' : 'Charger booking flow'}
-        subtitle="Host activity + SDK navigation"
+        subtitle="Maps to openChargerBookingFlow()"
         onPress={onOpenChargerBooking}
         disabled={disabled}
         palette={palette}
@@ -409,20 +364,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 16,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  session: { fontSize: 14, flex: 1 },
-  smallBtn: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    borderWidth: StyleSheet.hairlineWidth,
   },
   primaryBtn: {
     borderRadius: 12,

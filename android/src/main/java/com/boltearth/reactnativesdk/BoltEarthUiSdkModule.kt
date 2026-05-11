@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
 import android.os.Bundle
-import com.boltearthsdk.BoltAuthResult
 import com.boltearthsdk.BoltEarthUiSdk
 import com.boltearthsdk.BoltLogoutResult
 import com.boltearthsdk.SdkFontOverrides
@@ -16,24 +15,10 @@ import com.facebook.react.bridge.ReactMethod
 import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.WritableMap
 import com.facebook.react.module.annotations.ReactModule
-import com.facebook.react.uimanager.UIManagerModule
-import com.facebook.react.uimanager.UIBlock
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.launch
 
 @ReactModule(name = BoltEarthUiSdkModule.NAME)
-class BoltEarthUiSdkModule(private val reactContext: ReactApplicationContext) :
+class BoltEarthUiSdkModule(reactContext: ReactApplicationContext) :
   ReactContextBaseJavaModule(reactContext) {
-
-  private val moduleScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-
-  override fun invalidate() {
-    super.invalidate()
-    moduleScope.cancel()
-  }
 
   override fun getName(): String = NAME
 
@@ -51,8 +36,6 @@ class BoltEarthUiSdkModule(private val reactContext: ReactApplicationContext) :
       if (config.hasKey("primaryColor")) config.getString("primaryColor").orEmpty() else ""
     val localeLanguageTag =
       if (config.hasKey("localeLanguageTag")) config.getString("localeLanguageTag").orEmpty() else ""
-    val enableNetworkLogging =
-      if (config.hasKey("enableNetworkLogging")) config.getBoolean("enableNetworkLogging") else false
 
     val fonts =
       if (config.hasKey("fontOverrides")) {
@@ -69,108 +52,13 @@ class BoltEarthUiSdkModule(private val reactContext: ReactApplicationContext) :
       primaryColor,
       fonts,
       localeLanguageTag,
-      enableNetworkLogging,
     )
-  }
-
-  @ReactMethod
-  fun setNetworkLoggingEnabled(enabled: Boolean) {
-    BoltEarthUiSdk.setNetworkLoggingEnabled(enabled)
-  }
-
-  @ReactMethod
-  fun setNetworkLoggingEnabledForContext(enabled: Boolean) {
-    BoltEarthUiSdk.setNetworkLoggingEnabled(reactApplicationContext, enabled)
-  }
-
-  @ReactMethod
-  fun ensureLoggedIn(promise: Promise) {
-    BoltEarthUiSdk.ensureLoggedIn(reactApplicationContext) { result ->
-      promise.resolve(authResultToMap(result))
-    }
-  }
-
-  @ReactMethod
-  fun ensureLoggedInForcingRelogin(promise: Promise) {
-    BoltEarthUiSdk.ensureLoggedInForcingRelogin(reactApplicationContext) { result ->
-      promise.resolve(authResultToMap(result))
-    }
   }
 
   @ReactMethod
   fun logout(promise: Promise) {
     BoltEarthUiSdk.logout(reactApplicationContext) { result ->
       promise.resolve(logoutResultToMap(result))
-    }
-  }
-
-  @ReactMethod
-  fun hasValidSession(promise: Promise) {
-    promise.resolve(BoltEarthUiSdk.hasValidSession(reactApplicationContext))
-  }
-
-  @ReactMethod
-  fun applyStatusBarColor(promise: Promise) {
-    val activity = reactApplicationContext.currentActivity
-    if (activity == null) {
-      promise.reject("E_NO_ACTIVITY", "No Android Activity is available")
-      return
-    }
-    try {
-      BoltEarthUiSdk.applyStatusBarColor(activity)
-      promise.resolve(null)
-    } catch (e: Exception) {
-      promise.reject("E_STATUS_BAR", e.message, e)
-    }
-  }
-
-  @ReactMethod
-  fun tintViewTree(reactTag: Int, promise: Promise) {
-    val uiManager = reactApplicationContext.getNativeModule(UIManagerModule::class.java)
-    if (uiManager == null) {
-      promise.reject("E_UI_MANAGER", "UIManagerModule is not available")
-      return
-    }
-    try {
-      uiManager.addUIBlock(
-        UIBlock { nvhm ->
-          try {
-            val view = nvhm.resolveView(reactTag)
-            if (view == null) {
-              promise.reject("E_TINT_VIEW", "Could not resolve view for reactTag=$reactTag")
-              return@UIBlock
-            }
-            BoltEarthUiSdk.tintViewTree(view)
-            promise.resolve(null)
-          } catch (e: Exception) {
-            promise.reject("E_TINT_VIEW", e.message, e)
-          }
-        },
-      )
-    } catch (e: Exception) {
-      promise.reject("E_TINT_SCHEDULE", e.message, e)
-    }
-  }
-
-  @ReactMethod
-  fun wrapContextWithTheme(promise: Promise) {
-    try {
-      BoltEarthUiSdk.wrapContextWithTheme(reactApplicationContext)
-      promise.resolve(null)
-    } catch (e: Exception) {
-      promise.reject("E_WRAP_CONTEXT", e.message, e)
-    }
-  }
-
-  @ReactMethod
-  fun resetLocalSessionBeforeUserSwitch(promise: Promise) {
-    moduleScope.launch {
-      try {
-        BoltEarthUiSdk.resetLocalSessionBeforeUserSwitch(reactApplicationContext)
-        promise.resolve(null)
-      } catch (e: Exception) {
-        promise.reject("E_RESET_LOCAL_SESSION", e.message, e)
-      }
     }
   }
 
@@ -227,21 +115,6 @@ class BoltEarthUiSdkModule(private val reactContext: ReactApplicationContext) :
       optInt("semiBold"),
       optInt("bold"),
     )
-  }
-
-  private fun authResultToMap(result: BoltAuthResult): WritableMap {
-    val map = Arguments.createMap()
-    when (result) {
-      is BoltAuthResult.Success -> map.putString("type", "success")
-      is BoltAuthResult.Failure -> {
-        map.putString("type", "failure")
-        val err = result.error
-        map.putString("errorMessage", err?.message)
-        map.putString("errorClass", err?.javaClass?.name)
-      }
-      else -> map.putString("type", "unknown")
-    }
-    return map
   }
 
   private fun logoutResultToMap(result: BoltLogoutResult): WritableMap {

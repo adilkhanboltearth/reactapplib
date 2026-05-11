@@ -1,11 +1,5 @@
 import { NativeModules, Platform } from 'react-native';
 
-export type AuthResultMap = {
-  type: 'success' | 'failure' | 'unknown';
-  errorMessage?: string;
-  errorClass?: string;
-};
-
 export type FontOverridesInput = {
   light?: number;
   regular?: number;
@@ -20,27 +14,19 @@ export type BoltEarthUiSdkInitConfig = {
   sdkPackage?: string;
   primaryColor?: string;
   localeLanguageTag?: string;
-  enableNetworkLogging?: boolean;
   fontOverrides?: FontOverridesInput;
 };
 
-/** Native methods that use RN Promise bridging (last Promise arg on Android). */
+export type LogoutResultMap = {
+  type: 'success' | 'failure' | 'unknown';
+  errorMessage?: string;
+  errorClass?: string;
+};
+
+/** Mirrors the slim native module — maps to [BoltEarthUiSdk] on Android only. */
 type NativeBoltEarthUiSdk = {
   initialize: (config: Record<string, unknown>) => void;
-  setNetworkLoggingEnabled: (enabled: boolean) => void;
-  setNetworkLoggingEnabledForContext: (enabled: boolean) => void;
-  ensureLoggedIn: () => Promise<AuthResultMap>;
-  ensureLoggedInForcingRelogin: () => Promise<AuthResultMap>;
-  logout: () => Promise<{
-    type: string;
-    errorMessage?: string;
-    errorClass?: string;
-  }>;
-  hasValidSession: () => Promise<boolean>;
-  applyStatusBarColor: () => Promise<null>;
-  tintViewTree: (reactTag: number) => Promise<null>;
-  wrapContextWithTheme: () => Promise<null>;
-  resetLocalSessionBeforeUserSwitch: () => Promise<null>;
+  logout: () => Promise<LogoutResultMap>;
   openUsersBookingsList: () => Promise<null>;
   openChargerBookingFlow: () => Promise<null>;
 };
@@ -74,21 +60,14 @@ export function initialize(config: BoltEarthUiSdkInitConfig): void {
   if (config.localeLanguageTag != null) {
     map.localeLanguageTag = config.localeLanguageTag;
   }
-  if (config.enableNetworkLogging != null) {
-    map.enableNetworkLogging = config.enableNetworkLogging;
-  }
   if (config.fontOverrides != null) {
     map.fontOverrides = config.fontOverrides;
   }
   n.initialize(map);
 }
 
-export function ensureLoggedIn(): Promise<AuthResultMap> {
-  return requireNative().ensureLoggedIn();
-}
-
-export function ensureLoggedInForcingRelogin(): Promise<AuthResultMap> {
-  return requireNative().ensureLoggedInForcingRelogin();
+export function logout(): Promise<LogoutResultMap> {
+  return requireNative().logout();
 }
 
 export function openUsersBookingsList(): Promise<void> {
@@ -100,15 +79,5 @@ export function openUsersBookingsList(): Promise<void> {
 export function openChargerBookingFlow(): Promise<void> {
   return requireNative()
     .openChargerBookingFlow()
-    .then(() => undefined);
-}
-
-export function hasValidSession(): Promise<boolean> {
-  return requireNative().hasValidSession();
-}
-
-export function wrapContextWithTheme(): Promise<void> {
-  return requireNative()
-    .wrapContextWithTheme()
     .then(() => undefined);
 }
