@@ -1,22 +1,5 @@
 # Bolt Earth React Native SDK — Short integration reference
 
-**Package:** `@boltearth/react-native-sdk` (Android-only; [source](https://github.com/adilkhanboltearth/reactapplib))
-
----
-
-## Install (npm)
-
-
-From **GitHub**:
-
-```bash
-npm install github:adilkhanboltearth/reactapplib#main
-```
-
-From **tarball** (per upstream): clone repo → `npm install` → `npm pack` → install the generated `.tgz` in your app.
-
----
-
 ## Gradle: what you must add
 
 ### 1. Hilt (required — Bolt UI activities are Hilt-based)
