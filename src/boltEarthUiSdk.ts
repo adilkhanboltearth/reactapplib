@@ -26,7 +26,7 @@ export type LogoutResultMap = {
 
 /** Mirrors the slim native module — maps to [BoltEarthUiSdk] on Android only. */
 type NativeBoltEarthUiSdk = {
-  initialize: (config: Record<string, unknown>) => void;
+  initialize: (config: Record<string, unknown>) => Promise<null>;
   logout: () => Promise<LogoutResultMap>;
   openUsersBookingsList: () => Promise<null>;
   openChargerBookingFlow: () => Promise<null>;
@@ -46,7 +46,7 @@ function requireNative(): NativeBoltEarthUiSdk {
   return native;
 }
 
-export function initialize(config: BoltEarthUiSdkInitConfig): void {
+export function initialize(config: BoltEarthUiSdkInitConfig): Promise<void> {
   const n = requireNative();
   const map: Record<string, unknown> = {
     userId: config.userId,
@@ -62,7 +62,7 @@ export function initialize(config: BoltEarthUiSdkInitConfig): void {
   if (config.fontOverrides != null) {
     map.fontOverrides = config.fontOverrides;
   }
-  n.initialize(map);
+  return n.initialize(map).then(() => undefined);
 }
 
 export function logout(): Promise<LogoutResultMap> {
