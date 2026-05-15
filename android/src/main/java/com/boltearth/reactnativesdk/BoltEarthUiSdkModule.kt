@@ -6,6 +6,7 @@ import android.content.Intent
 import android.os.Bundle
 import com.boltearthsdk.BoltEarthUiSdk
 import com.boltearthsdk.BoltLogoutResult
+import com.boltearthsdk.SdkEnvironment
 import com.boltearthsdk.SdkFontOverrides
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
@@ -31,7 +32,12 @@ class BoltEarthUiSdkModule(reactContext: ReactApplicationContext) :
       config.getString("sdkToken")
         ?: throw IllegalArgumentException("initialize: sdkToken is required")
 
-    val sdkPackage = if (config.hasKey("sdkPackage")) config.getString("sdkPackage").orEmpty() else ""
+    val environment = when (
+      if (config.hasKey("environment")) config.getString("environment")?.lowercase() else null
+    ) {
+      "production" -> SdkEnvironment.Production
+      else -> SdkEnvironment.Development
+    }
     val primaryColor =
       if (config.hasKey("primaryColor")) config.getString("primaryColor").orEmpty() else ""
     val localeLanguageTag =
@@ -48,7 +54,7 @@ class BoltEarthUiSdkModule(reactContext: ReactApplicationContext) :
       ctx,
       userId,
       sdkToken,
-      sdkPackage,
+      environment,
       primaryColor,
       fonts,
       localeLanguageTag,

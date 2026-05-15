@@ -11,7 +11,8 @@ export type FontOverridesInput = {
 export type BoltEarthUiSdkInitConfig = {
   userId: string;
   sdkToken: string;
-  sdkPackage?: string;
+  /** Maps to `SdkEnvironment.Production` or `SdkEnvironment.Development` on the native side. */
+  environment?: 'production' | 'development';
   primaryColor?: string;
   localeLanguageTag?: string;
   fontOverrides?: FontOverridesInput;
@@ -50,10 +51,8 @@ export function initialize(config: BoltEarthUiSdkInitConfig): void {
   const map: Record<string, unknown> = {
     userId: config.userId,
     sdkToken: config.sdkToken,
+    environment: config.environment === 'production' ? 'production' : 'development',
   };
-  if (config.sdkPackage != null) {
-    map.sdkPackage = config.sdkPackage;
-  }
   if (config.primaryColor != null) {
     map.primaryColor = config.primaryColor;
   }
