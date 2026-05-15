@@ -1,15 +1,14 @@
 /**
  * BoltEarthSdk — JavaScript façade over native modules:
- * - iOS: `BoltEarthBridge` (same JS behavior as the original sample below).
- * - Android: `BoltEarthUiSdk` (`BoltEarthUiSdkModule` — userId, sdkToken, openChargerBookingFlow, …).
+ * - iOS: `BoltEarthBridge` (`BoltEarthUiSdkCore`) — package id resolved inside native SDK from the host bundle + environment.
+ * - Android: `BoltEarthUiSdk` (`BoltEarthUiSdkModule` — userId, sdkToken, environment, flows, …).
  *
  * Copy into your RN app (e.g. `src/native/BoltEarthSDK.js`) or publish from your SDK package.
  *
  * Prerequisites (iOS):
  * - BoltEarthUiSdkCore framework + BoltEarthUiSdkCoreResources.bundle in the host app.
  * - `BoltEarthBridge.swift` + `BoltEarthBridge.m` in the iOS target.
- * - Optional typography: ship .ttf in the app target, declare under `UIAppFonts` relative to the
- *   bundle (this app bundles `Roboto-{Regular,Bold,SemiBold}.ttf`), and pass matching
+ * - Optional typography: ship .ttf in the app target, declare under `UIAppFonts`, and pass matching
  *   PostScript-style names (`sdkRegularFontName`, etc.).
  *
  * Prerequisites (Android):
@@ -19,14 +18,17 @@
 
 import { NativeModules, Platform } from 'react-native';
 
-const { BoltEarthBridge } = NativeModules;
+const BoltEarthBridge = NativeModules.BoltEarthBridge;
 const BoltEarthUiSdk = NativeModules.BoltEarthUiSdk;
 
+const iosReady = Platform.OS === 'ios' && BoltEarthBridge != null;
 const androidReady = Platform.OS === 'android' && BoltEarthUiSdk != null;
 
-const notIOS = async () => {
+const warnNativeUnavailable = async () => {
   if (__DEV__) {
-    console.warn('[BoltEarthSDK] Native bridge is available on iOS only.');
+    console.warn(
+      '[BoltEarthSDK] Native BoltEarth module is not available on this platform or failed to link.',
+    );
   }
 };
 
@@ -34,124 +36,118 @@ const notIOS = async () => {
  * @typedef {object} BoltInitializeOptions
  * @property {string} clientID
  * @property {string} sdkToken
- * @property {string} [appPackageId] — iOS only; ignored on Android (environment drives package resolution).
- * @property {'staging'|'production'} [environment='staging']
- *   Android: `'production'` sends the host app's package name; anything else sends the internal test id.
- * @property {string|null} [language] — ISO 639-1 alpha-2; omit or null for device default
- * @property {string} [sdkRegularFontName]
- * @property {string} [sdkBoldFontName]
- * @property {string} [sdkSemiBoldFontName]
- * @property {string} [sdkThemeColorHex]
+ * @property {'staging'|'production'} [environment='staging'] — iOS: forwarded to native `BoltEarthSDK.Configuration`; Android: "production" → SdkEnvironment.Production, anything else → Development.
+ * @property {string|null} [language] — ISO 639-1 alpha-2; omit or null for device default (`localeLanguageTag` on Android).
+ * @property {string} [sdkRegularFontName] — **iOS only**
+ * @property {string} [sdkBoldFontName] — **iOS only**
+ * @property {string} [sdkSemiBoldFontName] — **iOS only**
+ * @property {string} [sdkThemeColorHex] — theme accent (`primaryColor` on Android when set).
+ * @property {boolean} [verboseLoggingEnabled] — **iOS only**
  * @property {{ light?: number, regular?: number, medium?: number, semiBold?: number, bold?: number }} [fontOverrides]
- *   Android only — forwarded to `BoltEarthUiSdk.initialize` when present.
+ *   **Android only** — forwarded to `BoltEarthUiSdk.initialize` when present.
  */
 
-function initConfigFromBoltOptions(options) {
-  const base = {
-    userId: options.clientID,
-    sdkToken: options.sdkToken,
-    environment: options.environment === 'production' ? 'production' : 'development',
-  };
-  if (options.sdkThemeColorHex != null && options.sdkThemeColorHex !== '') {
-    base.primaryColor = options.sdkThemeColorHex;
-  }
-  if (options.language != null && options.language !== '') {
-    base.localeLanguageTag = options.language;
-  }
-  if (options.fontOverrides != null) {
-    base.fontOverrides = options.fontOverrides;
-  }
-  return base;
-}
-
-/** Builds the ReadableMap keys expected by `BoltEarthUiSdkModule.initialize`. */
-function toNativeInitMap(config) {
+/**
+ * Builds the ReadableMap passed to `BoltEarthUiSdkModule.initialize`.
+ * Keys: userId (required), sdkToken (required), environment, primaryColor,
+ * localeLanguageTag, fontOverrides (all optional).
+ */
+function toAndroidInitMap(options) {
+  const o = options ?? {};
   const map = {
-    userId: config.userId,
-    sdkToken: config.sdkToken,
-    environment: config.environment === 'production' ? 'production' : 'development',
+    userId: o.clientID,
+    sdkToken: o.sdkToken,
   };
-  if (config.primaryColor != null) {
-    map.primaryColor = config.primaryColor;
+  if (o.environment != null && o.environment !== '') {
+    map.environment = o.environment;
   }
-  if (config.localeLanguageTag != null) {
-    map.localeLanguageTag = config.localeLanguageTag;
+  if (o.sdkThemeColorHex != null && o.sdkThemeColorHex !== '') {
+    map.primaryColor = o.sdkThemeColorHex;
   }
-  if (config.fontOverrides != null) {
-    map.fontOverrides = config.fontOverrides;
+  if (o.language != null && o.language !== '') {
+    map.localeLanguageTag = o.language;
+  }
+  if (o.fontOverrides != null) {
+    map.fontOverrides = o.fontOverrides;
   }
   return map;
 }
 
 /** @returns {Promise<void>} */
 export async function initializeWithOptions(options) {
-  if (Platform.OS === 'ios') {
-    return BoltEarthBridge.initializeWithOptions(options ?? {});
+  const o = options ?? {};
+  if (iosReady) {
+    return BoltEarthBridge.initializeWithOptions(o);
   }
   if (androidReady) {
-    const o = options;
-    if (o == null || !o.clientID || !o.sdkToken) {
+    if (!o.clientID || !o.sdkToken) {
       throw new Error(
-        '[BoltEarthSDK] initializeWithOptions requires clientID and sdkToken.',
+        '[BoltEarthSDK] initializeWithOptions on Android requires clientID and sdkToken.',
       );
     }
-    BoltEarthUiSdk.initialize(toNativeInitMap(initConfigFromBoltOptions(o)));
+    BoltEarthUiSdk.initialize(toAndroidInitMap(o));
     return;
   }
-  return notIOS();
+  return warnNativeUnavailable();
 }
 
 /**
- * Legacy one-shot initializer (no Promise; failures only visible in Xcode console on iOS).
+ * Legacy one-shot initializer (no Promise; on iOS failures only visible in Xcode console).
+ *
+ * **iOS:** `initializeLegacy(clientID, sdkToken, environment?, language?)`
+ * — matches `BoltEarthBridge.initializeLegacy` (extra args after `language` are ignored).
+ *
+ * **Android:** `initializeLegacy(clientID, sdkToken, environment?, language?)`
+ * — `environment` maps "production" → SdkEnvironment.Production, anything else → Development.
+ *   A former `appPackageId` first positional arg (now unused by the native module) is still
+ *   accepted at position 0 for backward compatibility but is no longer forwarded.
+ *
+ * @param {string} clientID
+ * @param {string} sdkToken
+ * @param {...*} rest — platform-specific trailing arguments (see above).
  */
-export function initializeLegacy(
-  clientID,
-  sdkToken,
-  appPackageId,
-  environment = 'staging',
-  language = null,
-) {
-  if (Platform.OS === 'ios') {
-    BoltEarthBridge.initializeLegacy(
-      clientID,
-      sdkToken,
-      appPackageId,
-      environment,
-      language,
-    );
+export function initializeLegacy(clientID, sdkToken, ...rest) {
+  if (iosReady) {
+    const [environment = 'staging', language = null] = rest;
+    BoltEarthBridge.initializeLegacy(clientID, sdkToken, environment, language);
     return;
   }
   if (androidReady) {
+    // rest[0] was formerly appPackageId (no longer used by the native module).
+    // rest[1] is environment; rest[2] is language.
+    const [/* appPackageId (ignored) */, environment, language = null] = rest;
     const cfg = {
       userId: clientID,
       sdkToken,
-      environment: environment === 'production' ? 'production' : 'development',
     };
+    if (environment != null && environment !== '') {
+      cfg.environment = environment;
+    }
     if (language != null && language !== '') {
       cfg.localeLanguageTag = language;
     }
-    BoltEarthUiSdk.initialize(toNativeInitMap(cfg));
+    BoltEarthUiSdk.initialize(cfg);
     return;
   }
 }
 
 /** @returns {Promise<void>} */
 export async function presentChargerFlow() {
-  if (Platform.OS === 'ios') {
+  if (iosReady) {
     return BoltEarthBridge.presentChargerFlow();
   }
   if (androidReady) {
     return BoltEarthUiSdk.openChargerBookingFlow();
   }
-  return notIOS();
+  return warnNativeUnavailable();
 }
 
 /**
- * @param {{ bookingId?: string | null }} [options]
+ * @param {{ bookingId?: string | null }} [options] — forwarded on **iOS** only; unused on Android.
  * @returns {Promise<void>}
  */
 export async function presentBookingHistoryFlow(options) {
-  if (Platform.OS === 'ios') {
+  if (iosReady) {
     return BoltEarthBridge.presentBookingHistoryFlow(options ?? {});
   }
   if (androidReady) {
@@ -162,46 +158,46 @@ export async function presentBookingHistoryFlow(options) {
     }
     return BoltEarthUiSdk.openUsersBookingsList();
   }
-  return notIOS();
+  return warnNativeUnavailable();
 }
 
 /** @param {string | null | undefined} code */
 export async function setLanguage(code) {
-  if (Platform.OS === 'ios') {
+  if (iosReady) {
     return BoltEarthBridge.setLanguageCode(code ?? null);
   }
   if (androidReady) {
     return;
   }
-  return notIOS();
+  return warnNativeUnavailable();
 }
 
 /** @returns {Promise<string>} */
 export async function getCurrentLanguageCode() {
-  if (Platform.OS === 'ios') {
+  if (iosReady) {
     return BoltEarthBridge.currentLanguageCode();
   }
   if (androidReady) {
     return 'en';
   }
-  await notIOS();
+  await warnNativeUnavailable();
   return 'en';
 }
 
 /** @returns {Promise<string[]>} */
 export async function getSupportedLanguageCodes() {
-  if (Platform.OS === 'ios') {
+  if (iosReady) {
     return BoltEarthBridge.supportedLanguageCodes();
   }
   if (androidReady) {
     return [];
   }
-  await notIOS();
+  await warnNativeUnavailable();
   return [];
 }
 
 export function setVerboseLoggingEnabled(enabled) {
-  if (Platform.OS === 'ios') {
+  if (iosReady) {
     BoltEarthBridge.setVerboseLoggingEnabled(!!enabled);
     return;
   }
@@ -212,30 +208,32 @@ export function setVerboseLoggingEnabled(enabled) {
 
 /** @returns {Promise<boolean>} */
 export async function getVerboseLoggingEnabled() {
-  if (Platform.OS === 'ios') {
+  if (iosReady) {
     return BoltEarthBridge.verboseLoggingEnabled();
   }
   if (androidReady) {
     return false;
   }
-  await notIOS();
+  await warnNativeUnavailable();
   return false;
 }
 
 /**
- * Ends server session (best-effort) and clears native credentials. Values from `initializeWithOptions` remain for re-login.
+ * Ends server session (best-effort) and clears native credentials. Values from `initializeWithOptions`
+ * remain for re-init / re-login where applicable.
  *
- * @returns {Promise<boolean>} `true` if the native logout HTTP response was treated as successful; `false` otherwise. Local session is cleared either way.
+ * @returns {Promise<boolean>} `true` if the native logout HTTP response was treated as successful;
+ *   `false` otherwise. Local session is cleared either way where implemented natively.
  */
 export async function logout() {
-  if (Platform.OS === 'ios') {
+  if (iosReady) {
     return BoltEarthBridge.logout();
   }
   if (androidReady) {
     const result = await BoltEarthUiSdk.logout();
     return result?.type === 'success';
   }
-  await notIOS();
+  await warnNativeUnavailable();
   return false;
 }
 
